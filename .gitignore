@@ -13,3 +13,5 @@ test_gemini_image.py
 node_modules/
 dist/
 build/
+.venv*/
+archive/
