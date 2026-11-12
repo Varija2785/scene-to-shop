@@ -1,0 +1,602 @@
+{
+  "model": "yoloe-11s-seg-pf.pt",
+  "confidence_threshold": 0.3,
+  "minimum_box_area_ratio": 0.005,
+  "iou_threshold": 0.7,
+  "images": [
+    {
+      "image": "test.jpg",
+      "raw_detection_count": 17,
+      "clean_detection_count": 11,
+      "objects": [
+        {
+          "label": "bed",
+          "confidence": 0.8907,
+          "box": [
+            0.0,
+            721.07,
+            856.19,
+            1177.12
+          ],
+          "area_ratio": 0.279349
+        },
+        {
+          "label": "nightstand",
+          "confidence": 0.8391,
+          "box": [
+            867.45,
+            853.01,
+            1023.99,
+            1065.85
+          ],
+          "area_ratio": 0.023837
+        },
+        {
+          "label": "stuffed toy",
+          "confidence": 0.8342,
+          "box": [
+            535.56,
+            992.21,
+            675.57,
+            1153.3
+          ],
+          "area_ratio": 0.016137
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.8171,
+          "box": [
+            404.07,
+            754.67,
+            559.24,
+            832.72
+          ],
+          "area_ratio": 0.008665
+        },
+        {
+          "label": "chair",
+          "confidence": 0.7542,
+          "box": [
+            57.78,
+            739.51,
+            249.72,
+            860.08
+          ],
+          "area_ratio": 0.016558
+        },
+        {
+          "label": "lamp",
+          "confidence": 0.7482,
+          "box": [
+            925.58,
+            491.35,
+            1023.9,
+            614.45
+          ],
+          "area_ratio": 0.008659
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.7327,
+          "box": [
+            548.82,
+            759.69,
+            770.35,
+            864.2
+          ],
+          "area_ratio": 0.016564
+        },
+        {
+          "label": "bathroom mirror",
+          "confidence": 0.6003,
+          "box": [
+            280.3,
+            360.94,
+            418.1,
+            738.55
+          ],
+          "area_ratio": 0.037229
+        },
+        {
+          "label": "tapestry",
+          "confidence": 0.4899,
+          "box": [
+            451.63,
+            229.71,
+            845.24,
+            573.3
+          ],
+          "area_ratio": 0.096757
+        },
+        {
+          "label": "lamp",
+          "confidence": 0.4644,
+          "box": [
+            928.1,
+            490.79,
+            1024.0,
+            874.68
+          ],
+          "area_ratio": 0.026339
+        },
+        {
+          "label": "quilt",
+          "confidence": 0.3473,
+          "box": [
+            102.68,
+            822.98,
+            662.88,
+            986.57
+          ],
+          "area_ratio": 0.065564
+        }
+      ]
+    },
+    {
+      "image": "test1.jpg",
+      "raw_detection_count": 30,
+      "clean_detection_count": 16,
+      "objects": [
+        {
+          "label": "carpet",
+          "confidence": 0.8838,
+          "box": [
+            127.14,
+            289.23,
+            575.2,
+            412.14
+          ],
+          "area_ratio": 0.179576
+        },
+        {
+          "label": "shelf",
+          "confidence": 0.8747,
+          "box": [
+            665.13,
+            24.68,
+            739.0,
+            152.16
+          ],
+          "area_ratio": 0.030704
+        },
+        {
+          "label": "couch",
+          "confidence": 0.8617,
+          "box": [
+            147.31,
+            198.29,
+            410.07,
+            321.92
+          ],
+          "area_ratio": 0.105921
+        },
+        {
+          "label": "well",
+          "confidence": 0.8526,
+          "box": [
+            485.98,
+            144.75,
+            654.43,
+            265.48
+          ],
+          "area_ratio": 0.066309
+        },
+        {
+          "label": "chair",
+          "confidence": 0.8321,
+          "box": [
+            485.2,
+            235.92,
+            659.76,
+            395.57
+          ],
+          "area_ratio": 0.09087
+        },
+        {
+          "label": "houseplant",
+          "confidence": 0.8207,
+          "box": [
+            0.01,
+            256.59,
+            69.55,
+            350.43
+          ],
+          "area_ratio": 0.021276
+        },
+        {
+          "label": "floral arrangement",
+          "confidence": 0.8094,
+          "box": [
+            480.57,
+            76.66,
+            550.69,
+            125.72
+          ],
+          "area_ratio": 0.011218
+        },
+        {
+          "label": "chair",
+          "confidence": 0.8078,
+          "box": [
+            646.78,
+            210.0,
+            707.6,
+            324.14
+          ],
+          "area_ratio": 0.022635
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.8006,
+          "box": [
+            237.18,
+            212.26,
+            280.97,
+            250.02
+          ],
+          "area_ratio": 0.005392
+        },
+        {
+          "label": "houseplant",
+          "confidence": 0.746,
+          "box": [
+            48.81,
+            215.6,
+            143.39,
+            319.81
+          ],
+          "area_ratio": 0.032141
+        },
+        {
+          "label": "cabinet",
+          "confidence": 0.7314,
+          "box": [
+            393.74,
+            50.57,
+            485.15,
+            154.66
+          ],
+          "area_ratio": 0.031027
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.6877,
+          "box": [
+            301.43,
+            198.49,
+            357.44,
+            237.18
+          ],
+          "area_ratio": 0.007065
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.5169,
+          "box": [
+            193.3,
+            201.63,
+            239.79,
+            236.69
+          ],
+          "area_ratio": 0.005316
+        },
+        {
+          "label": "cocktail table",
+          "confidence": 0.4335,
+          "box": [
+            373.58,
+            252.68,
+            508.15,
+            325.7
+          ],
+          "area_ratio": 0.032038
+        },
+        {
+          "label": "couch",
+          "confidence": 0.3792,
+          "box": [
+            396.4,
+            189.87,
+            485.93,
+            254.46
+          ],
+          "area_ratio": 0.018855
+        },
+        {
+          "label": "hassock",
+          "confidence": 0.3042,
+          "box": [
+            169.08,
+            227.7,
+            220.17,
+            321.14
+          ],
+          "area_ratio": 0.015567
+        }
+      ]
+    },
+    {
+      "image": "test2.jpg",
+      "raw_detection_count": 17,
+      "clean_detection_count": 13,
+      "objects": [
+        {
+          "label": "chair",
+          "confidence": 0.9683,
+          "box": [
+            47.7,
+            209.77,
+            191.31,
+            372.11
+          ],
+          "area_ratio": 0.116771
+        },
+        {
+          "label": "picture",
+          "confidence": 0.9358,
+          "box": [
+            103.17,
+            4.07,
+            156.26,
+            70.82
+          ],
+          "area_ratio": 0.01775
+        },
+        {
+          "label": "picture",
+          "confidence": 0.9249,
+          "box": [
+            102.85,
+            77.97,
+            155.31,
+            143.58
+          ],
+          "area_ratio": 0.017242
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.9,
+          "box": [
+            55.42,
+            226.13,
+            146.12,
+            304.94
+          ],
+          "area_ratio": 0.035804
+        },
+        {
+          "label": "houseplant",
+          "confidence": 0.8348,
+          "box": [
+            13.48,
+            62.17,
+            121.56,
+            154.32
+          ],
+          "area_ratio": 0.049882
+        },
+        {
+          "label": "lamp",
+          "confidence": 0.8234,
+          "box": [
+            157.17,
+            112.96,
+            225.95,
+            262.8
+          ],
+          "area_ratio": 0.051622
+        },
+        {
+          "label": "cabinet",
+          "confidence": 0.7695,
+          "box": [
+            0.0,
+            244.94,
+            46.53,
+            414.8
+          ],
+          "area_ratio": 0.039587
+        },
+        {
+          "label": "bed",
+          "confidence": 0.7556,
+          "box": [
+            183.56,
+            107.53,
+            365.0,
+            476.93
+          ],
+          "area_ratio": 0.335692
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.6681,
+          "box": [
+            240.01,
+            204.58,
+            359.06,
+            247.06
+          ],
+          "area_ratio": 0.025329
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.6055,
+          "box": [
+            247.37,
+            171.2,
+            328.9,
+            207.45
+          ],
+          "area_ratio": 0.0148
+        },
+        {
+          "label": "music stool",
+          "confidence": 0.5747,
+          "box": [
+            307.81,
+            346.15,
+            364.99,
+            533.45
+          ],
+          "area_ratio": 0.05364
+        },
+        {
+          "label": "lamp shade",
+          "confidence": 0.5603,
+          "box": [
+            157.14,
+            112.73,
+            226.39,
+            156.01
+          ],
+          "area_ratio": 0.015011
+        },
+        {
+          "label": "kitchen window",
+          "confidence": 0.3094,
+          "box": [
+            0.04,
+            0.85,
+            41.79,
+            201.52
+          ],
+          "area_ratio": 0.041966
+        }
+      ]
+    },
+    {
+      "image": "test3.jpg",
+      "raw_detection_count": 17,
+      "clean_detection_count": 11,
+      "objects": [
+        {
+          "label": "picture",
+          "confidence": 0.9558,
+          "box": [
+            158.28,
+            269.61,
+            220.36,
+            375.14
+          ],
+          "area_ratio": 0.021359
+        },
+        {
+          "label": "lamp",
+          "confidence": 0.8715,
+          "box": [
+            346.57,
+            354.77,
+            396.56,
+            420.24
+          ],
+          "area_ratio": 0.01067
+        },
+        {
+          "label": "heater",
+          "confidence": 0.846,
+          "box": [
+            0.99,
+            446.05,
+            117.47,
+            517.4
+          ],
+          "area_ratio": 0.027092
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.845,
+          "box": [
+            181.94,
+            435.12,
+            254.92,
+            468.82
+          ],
+          "area_ratio": 0.008018
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.7811,
+          "box": [
+            442.27,
+            348.05,
+            479.61,
+            390.06
+          ],
+          "area_ratio": 0.005115
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.6675,
+          "box": [
+            385.58,
+            385.43,
+            479.64,
+            426.28
+          ],
+          "area_ratio": 0.012527
+        },
+        {
+          "label": "bed",
+          "confidence": 0.6663,
+          "box": [
+            57.24,
+            405.67,
+            275.57,
+            560.42
+          ],
+          "area_ratio": 0.110145
+        },
+        {
+          "label": "pillow",
+          "confidence": 0.5885,
+          "box": [
+            344.79,
+            414.39,
+            465.12,
+            466.54
+          ],
+          "area_ratio": 0.02046
+        },
+        {
+          "label": "quilt",
+          "confidence": 0.4832,
+          "box": [
+            102.47,
+            462.89,
+            479.61,
+            638.96
+          ],
+          "area_ratio": 0.216504
+        },
+        {
+          "label": "hassock",
+          "confidence": 0.4686,
+          "box": [
+            56.54,
+            467.52,
+            214.54,
+            560.05
+          ],
+          "area_ratio": 0.047663
+        },
+        {
+          "label": "carpet",
+          "confidence": 0.3468,
+          "box": [
+            0.76,
+            563.53,
+            132.23,
+            639.0
+          ],
+          "area_ratio": 0.032351
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_raw_detections": 81,
+    "total_clean_detections": 51,
+    "detections_removed": 30
+  }
+}

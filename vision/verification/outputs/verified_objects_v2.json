@@ -1,0 +1,10 @@
+[
+  {
+    "is_real_object": true,
+    "object_name": "upholstered bed",
+    "description": "A modern curved platform bed upholstered in textured bouclé fabric, dressed with pillows and a duvet.",
+    "shopping_relevant": true,
+    "confidence": 0.95,
+    "image": "vision\\detection\\outputs\\objects_clean\\test\\01_bed_0.89_crop.jpg"
+  }
+]

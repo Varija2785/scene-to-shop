@@ -1,0 +1,295 @@
+﻿from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import requests
+import numpy as np
+import torch
+from PIL import Image
+from io import BytesIO
+from transformers import CLIPProcessor, CLIPModel
+MODEL_NAME = "openai/clip-vit-base-patch32"
+@lru_cache(maxsize=1)
+def load_clip():
+    print("Loading CLIP model...")
+    model = CLIPModel.from_pretrained(MODEL_NAME)
+    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    model.eval()
+    return model, processor
+def image_embedding(image):
+    model, processor = load_clip()
+    inputs = processor(
+        images=image,
+        return_tensors="pt"
+    )
+    with torch.no_grad():
+        output = model.get_image_features(**inputs)
+    # Transformers may return a BaseModelOutputWithPooling
+    # instead of a raw tensor.
+    if hasattr(output, "pooler_output"):
+        features = output.pooler_output
+    elif hasattr(output, "last_hidden_state"):
+        features = output.last_hidden_state[:, 0, :]
+    else:
+        features = output
+    # Make sure we have a tensor.
+    if not isinstance(features, torch.Tensor):
+        raise TypeError(
+            f"Unexpected CLIP output type: {type(features)}"
+        )
+    # L2 normalize the embedding.
+    features = features / features.norm(
+        dim=-1,
+        keepdim=True
+    ).clamp(min=1e-12)
+    return features[0].cpu().numpy()
+def cosine_similarity(a, b):
+    a = np.asarray(a, dtype=np.float32)
+    b = np.asarray(b, dtype=np.float32)
+    denominator = (
+        np.linalg.norm(a) *
+        np.linalg.norm(b)
+    )
+    if denominator == 0:
+        return 0.0
+    return float(np.dot(a, b) / denominator)
+def download_product_image(url):
+    if not url:
+        return None
+    try:
+        response = requests.get(
+            url,
+            timeout=8,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/154.0.0.0 Safari/537.36"
+                )
+            }
+        )
+        response.raise_for_status()
+        return Image.open(
+            BytesIO(response.content)
+        ).convert("RGB")
+    except Exception as e:
+        print(
+            f"Could not download product image: "
+            f"{e}"
+        )
+        return None
+def _price_sort_info(product):
+    """Sort INR prices first, foreign currencies next, and unknown prices last."""
+    import math
+    import re
+    price = product.get("price", "")
+    currency = str(product.get("currency") or "").strip().upper()
+    if isinstance(price, dict):
+        currency = str(price.get("currency") or currency).strip().upper()
+        value = price.get("extracted_value")
+        if value is None:
+            value = price.get("value") or price.get("raw") or ""
+        raw = str(price.get("raw") or price.get("value") or value or "").strip()
+    else:
+        value = price
+        raw = str(price or "").strip()
+    text = f"{currency} {raw}".upper()
+    if "\u20b9" in text or any(x in text for x in ("INR", "RS.", "RS ", "RUPEE")):
+        currency = "INR"
+    elif "\u20ac" in text or "EUR" in text:
+        currency = "EUR"
+    elif "\u00a3" in text or "GBP" in text:
+        currency = "GBP"
+    elif "$" in text or "USD" in text:
+        currency = "USD"
+    if value in ("", None) and not raw:
+        return (9, "UNKNOWN", float("inf"))
+    try:
+        if isinstance(value, (int, float)):
+            amount = float(value)
+        else:
+            cleaned = re.sub(r"[^0-9,.]", "", str(value or raw))
+            if not cleaned:
+                return (9, "UNKNOWN", float("inf"))
+            if "," in cleaned and "." in cleaned:
+                cleaned = cleaned.replace(",", "")
+            elif "," in cleaned:
+                parts = cleaned.split(",")
+                cleaned = "".join(parts) if len(parts[-1]) == 3 else ".".join(parts)
+            amount = float(cleaned)
+        if not math.isfinite(amount) or amount < 0:
+            return (9, "UNKNOWN", float("inf"))
+    except (TypeError, ValueError):
+        return (9, "UNKNOWN", float("inf"))
+    if currency == "INR":
+        return (0, "INR", amount)
+    if currency in ("EUR", "USD", "GBP"):
+        return (1, currency, amount)
+    if currency:
+        return (2, currency, amount)
+    return (8, "UNKNOWN", amount)
+
+
+def _output_features(output):
+    if hasattr(output, "pooler_output"):
+        features = output.pooler_output
+    elif hasattr(output, "last_hidden_state"):
+        features = output.last_hidden_state
+        if features.ndim == 3:
+            features = features[:, 0, :]
+    else:
+        features = output
+    if not isinstance(features, torch.Tensor):
+        raise TypeError(f"Unexpected CLIP output type: {type(features)}")
+    return features / features.norm(
+        dim=-1, keepdim=True
+    ).clamp(min=1e-12)
+def rank_products(selected_image, products, max_products=12):
+    """Combine image/title relevance; prefer cheaper INR listings among close matches."""
+    if not products:
+        return []
+    candidates = list(products[:max_products])
+    print(f"Ranking {len(candidates)} product listings...")
+    query_embedding = image_embedding(selected_image)
+    urls = [item.get("thumbnail", "") for item in candidates]
+    with ThreadPoolExecutor(max_workers=min(8, max(1, len(urls)))) as executor:
+        images = list(executor.map(download_product_image, urls))
+    image_scores = {}
+    valid_indices = [i for i, image in enumerate(images) if image is not None]
+    if valid_indices:
+        try:
+            model, processor = load_clip()
+            inputs = processor(
+                images=[images[i] for i in valid_indices],
+                return_tensors="pt"
+            )
+            with torch.no_grad():
+                output = model.get_image_features(**inputs)
+            features = _output_features(output)
+            query = torch.as_tensor(
+                query_embedding, dtype=features.dtype
+            ).reshape(1, -1)
+            scores = (features @ query.T).squeeze(-1).cpu().tolist()
+            image_scores.update({
+                i: float(score)
+                for i, score in zip(valid_indices, scores)
+            })
+        except Exception as exc:
+            print(f"Batch image scoring unavailable: {exc}")
+            for i in valid_indices:
+                try:
+                    image_scores[i] = cosine_similarity(
+                        query_embedding, image_embedding(images[i])
+                    )
+                except Exception as item_exc:
+                    print(f"Skipping image score {i}: {item_exc}")
+    titles = [
+        str(item.get("title") or item.get("name") or "").strip()
+        for item in candidates
+    ]
+    title_indices = [i for i, title in enumerate(titles) if title]
+    title_scores = {}
+    if title_indices:
+        try:
+            model, processor = load_clip()
+            inputs = processor(
+                text=[titles[i] for i in title_indices],
+                padding=True,
+                truncation=True,
+                return_tensors="pt"
+            )
+            with torch.no_grad():
+                output = model.get_text_features(**inputs)
+            features = _output_features(output)
+            query = torch.as_tensor(
+                query_embedding, dtype=features.dtype
+            ).reshape(1, -1)
+            scores = (features @ query.T).squeeze(-1).cpu().tolist()
+            title_scores.update({
+                i: float(score)
+                for i, score in zip(title_indices, scores)
+            })
+        except Exception as exc:
+            print(f"Title relevance scoring unavailable; using image scores: {exc}")
+    for i, product in enumerate(candidates):
+        image_score = image_scores.get(i)
+        title_score = title_scores.get(i)
+        product["visual_similarity"] = image_score
+        product["title_similarity"] = title_score
+        components = []
+        if image_score is not None:
+            components.append((0.55, image_score))
+        if title_score is not None:
+            components.append((0.45, title_score))
+        weight = sum(w for w, _ in components)
+        product["relevance_score"] = (
+            sum(w * score for w, score in components) / weight
+            if weight else None
+        )
+    # Relevance bands keep similar matches together; price breaks ties
+    # within a band. Scores are ranking signals, not probabilities.
+    def sort_key(product):
+        score = product.get("relevance_score")
+        if score is None:
+            return (1, 0, *_price_sort_info(product), 0)
+        band = int(score / 0.05)
+        return (0, -band, *_price_sort_info(product), -score)
+    candidates.sort(key=sort_key)
+    return candidates
+def listing_quality_info(product):
+    """Estimate whether a result looks like a purchasable listing.
+    Returns (score, reasons). This is a heuristic, not a verified classification.
+    It does not remove or reorder results by itself.
+    """
+    import re
+    from urllib.parse import urlparse
+    score = 0.50
+    reasons = []
+    title = str(product.get("title") or product.get("name") or "").lower()
+    link = str(product.get("link") or product.get("url") or "").lower()
+    source = str(product.get("source") or "").lower()
+    url_path = urlparse(link).path.lower()
+    price = product.get("price")
+    if isinstance(price, dict):
+        has_price = any(
+            price.get(key) not in ("", None)
+            for key in ("value", "extracted_value", "raw")
+        )
+    else:
+        has_price = price not in ("", None)
+    if has_price:
+        score += 0.20
+        reasons.append("price present")
+    # Positive signals from generic product metadata, when supplied by the provider.
+    metadata_keys = (
+        "product_id", "offer", "offers", "availability",
+        "brand", "rating", "reviews", "merchant"
+    )
+    present_metadata = [
+        key for key in metadata_keys
+        if product.get(key) not in ("", None, [], {})
+    ]
+    if present_metadata:
+        score += min(0.20, 0.05 * len(present_metadata))
+        reasons.append("product metadata present")
+    if re.search(r"/(product|products|item|p)/", url_path):
+        score += 0.10
+        reasons.append("product-like URL path")
+    # These signals describe page type, not the kind of product being sold.
+    non_product_patterns = (
+        r"\bhow to\b", r"\btutorial\b", r"\bnews\b",
+        r"\bblog\b", r"\barticle\b", r"\bfree download\b",
+        r"\b3d models?\b", r"\breview\b", r"\bguide\b",
+    )
+    page_text = f"{title} {url_path}"
+    matched = [pattern for pattern in non_product_patterns
+               if re.search(pattern, page_text)]
+    if matched:
+        score -= min(0.35, 0.15 * len(matched))
+        reasons.append("article, informational, or download-style signal")
+    # A social/inspiration source alone is weak evidence, so apply only a small penalty.
+    if any(token in source for token in ("pinterest", "instagram", "facebook")):
+        score -= 0.10
+        reasons.append("social or inspiration source")
+    return (max(0.0, min(1.0, score)), reasons)
+

@@ -1,0 +1,204 @@
+﻿from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor
+import requests
+import numpy as np
+import torch
+from PIL import Image
+from io import BytesIO
+from transformers import CLIPProcessor, CLIPModel
+MODEL_NAME = "openai/clip-vit-base-patch32"
+@lru_cache(maxsize=1)
+def load_clip():
+    print("Loading CLIP model...")
+    model = CLIPModel.from_pretrained(MODEL_NAME)
+    processor = CLIPProcessor.from_pretrained(MODEL_NAME)
+    model.eval()
+    return model, processor
+def image_embedding(image):
+    model, processor = load_clip()
+    inputs = processor(
+        images=image,
+        return_tensors="pt"
+    )
+    with torch.no_grad():
+        output = model.get_image_features(**inputs)
+    # Transformers may return a BaseModelOutputWithPooling
+    # instead of a raw tensor.
+    if hasattr(output, "pooler_output"):
+        features = output.pooler_output
+    elif hasattr(output, "last_hidden_state"):
+        features = output.last_hidden_state[:, 0, :]
+    else:
+        features = output
+    # Make sure we have a tensor.
+    if not isinstance(features, torch.Tensor):
+        raise TypeError(
+            f"Unexpected CLIP output type: {type(features)}"
+        )
+    # L2 normalize the embedding.
+    features = features / features.norm(
+        dim=-1,
+        keepdim=True
+    ).clamp(min=1e-12)
+    return features[0].cpu().numpy()
+def cosine_similarity(a, b):
+    a = np.asarray(a, dtype=np.float32)
+    b = np.asarray(b, dtype=np.float32)
+    denominator = (
+        np.linalg.norm(a) *
+        np.linalg.norm(b)
+    )
+    if denominator == 0:
+        return 0.0
+    return float(np.dot(a, b) / denominator)
+def download_product_image(url):
+    if not url:
+        return None
+    try:
+        response = requests.get(
+            url,
+            timeout=8,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 "
+                    "(Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) "
+                    "Chrome/154.0.0.0 Safari/537.36"
+                )
+            }
+        )
+        response.raise_for_status()
+        return Image.open(
+            BytesIO(response.content)
+        ).convert("RGB")
+    except Exception as e:
+        print(
+            f"Could not download product image: "
+            f"{e}"
+        )
+        return None
+def _price_sort_info(product):
+    """Return a comparable price group and numeric value when available."""
+    import re
+    price = product.get("price", "")
+    currency = str(product.get("currency") or "").strip().upper()
+    if isinstance(price, dict):
+        currency = str(
+            price.get("currency") or currency
+        ).strip().upper()
+        value = (
+            price.get("extracted_value")
+            or price.get("value")
+            or price.get("raw")
+            or ""
+        )
+    else:
+        value = price
+    raw = str(value or "").strip()
+    if not raw:
+        return (9, currency or "UNKNOWN", float("inf"))
+    if not currency:
+        if "?" in raw:
+            currency = "INR"
+        elif "$" in raw:
+            currency = "USD"
+        elif "?" in raw:
+            currency = "EUR"
+        elif "?" in raw:
+            currency = "GBP"
+        elif "?" in str(price):
+            currency = "INR"
+        else:
+            currency = "UNKNOWN"
+    if isinstance(value, (int, float)):
+        amount = float(value)
+    else:
+        cleaned = re.sub(r"[^0-9.,]", "", raw)
+        if not cleaned:
+            return (9, currency, float("inf"))
+        # Typical retailer prices use commas as thousands separators.
+        cleaned = cleaned.replace(",", "")
+        try:
+            amount = float(cleaned)
+        except ValueError:
+            return (9, currency, float("inf"))
+    if amount < 0:
+        return (9, currency, float("inf"))
+    # Sort Indian prices first, in ascending INR order. Other currencies
+    # remain in separate groups and are never compared as if equivalent.
+    if currency in ("INR", "RS", "RUPEE", "RUPEES"):
+        return (0, "INR", amount)
+    if currency != "UNKNOWN":
+        return (1, currency, amount)
+    return (8, "UNKNOWN", amount)
+def _output_features(output):
+    if hasattr(output, "pooler_output"):
+        features = output.pooler_output
+    elif hasattr(output, "last_hidden_state"):
+        features = output.last_hidden_state
+        if features.ndim == 3:
+            features = features[:, 0, :]
+    else:
+        features = output
+    if not isinstance(features, torch.Tensor):
+        raise TypeError(f"Unexpected CLIP output type: {type(features)}")
+    return features / features.norm(
+        dim=-1, keepdim=True
+    ).clamp(min=1e-12)
+def rank_products(selected_image, products, max_products=12):
+    if not products:
+        return []
+    candidates = list(products[:max_products])
+    print(f"Ranking {len(candidates)} product images with CLIP...")
+    query_embedding = image_embedding(selected_image)
+    urls = [item.get("thumbnail", "") for item in candidates]
+    # Download independent thumbnail URLs concurrently rather than waiting
+    # for each network request to finish in sequence.
+    workers = min(8, max(1, len(urls)))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        images = list(executor.map(download_product_image, urls))
+    valid_indices = [
+        index for index, image in enumerate(images) if image is not None
+    ]
+    similarities = {}
+    if valid_indices:
+        try:
+            model, processor = load_clip()
+            batch = [images[index] for index in valid_indices]
+            inputs = processor(
+                images=batch,
+                return_tensors="pt"
+            )
+            with torch.no_grad():
+                output = model.get_image_features(**inputs)
+            features = _output_features(output)
+            query = torch.as_tensor(
+                query_embedding, dtype=features.dtype
+            ).reshape(1, -1)
+            scores = (features @ query.T).squeeze(-1).cpu().tolist()
+            for index, score in zip(valid_indices, scores):
+                similarities[index] = float(score)
+        except Exception as batch_error:
+            print(f"Batched CLIP inference unavailable: {batch_error}")
+            # Safe fallback: still attempt individual images.
+            for index in valid_indices:
+                try:
+                    embedding = image_embedding(images[index])
+                    similarities[index] = cosine_similarity(
+                        query_embedding, embedding
+                    )
+                except Exception as image_error:
+                    print(f"Skipping CLIP score for item {index}: {image_error}")
+    for index, product in enumerate(candidates):
+        product["visual_similarity"] = similarities.get(index)
+    # Cheapest INR listings first; other currencies are kept separate.
+    # Missing prices go last. Visual similarity breaks price ties.
+    candidates.sort(
+        key=lambda item: (
+            *_price_sort_info(item),
+            -(item.get("visual_similarity")
+              if item.get("visual_similarity") is not None else -1)
+        )
+    )
+    return candidates

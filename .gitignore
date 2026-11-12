@@ -1,43 +1,15 @@
-﻿# Environment variables and secrets
 .env
 .env.*
 !.env.example
-# Python virtual environments
 .venv/
 .venv_fresh/
-venv/
-env/
-# Python cache
 __pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-# AI model weights
-*.pt
-*.pth
-*.onnx
-*.safetensors
-# Generated YOLO outputs
+*.pyc
 runs/
 weights/
-# Generated application outputs
-vision/selection/ui_outputs/
-# IDE and operating system files
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-# Logs
-*.log
-# Generated detection, retrieval and verification outputs
-**/outputs/
-vision/detection/test_images/
-# Temporary backups and edited recovery copies
-*.bak
-*.corrected
-*.layout-backup
-# Old source snapshots and recovery files
-*.before_*.py
-*.before_*.bak
-*.corrected
-*.layout-backup
+*.pt
+test_gemini.py
+test_gemini_image.py
+node_modules/
+dist/
+build/
