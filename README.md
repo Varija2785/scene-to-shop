@@ -22,7 +22,7 @@ scene-to-shop/
   weights/         model weights (not tracked by git)
   runs/            detection outputs (not tracked by git)
   archive/         old backups (not tracked by git)
-  backend/ frontend/ dataset/ docs/ evaluation/   reserved for future use
+  docs/            notes and screenshots (placeholder)
   yoloe-11s-seg-pf.pt   YOLOE weights, loaded from the project root
 ~~~
 
@@ -56,4 +56,5 @@ Never commit this file. It is listed in `.gitignore`.
 streamlit run vision\selection\ui\app.py
 ~~~
 Then open http://localhost:8501.
+
 
